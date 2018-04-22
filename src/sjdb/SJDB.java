@@ -15,18 +15,22 @@ public class SJDB {
 	 */
 	public static void main(String[] args) throws Exception {
 		// read serialised catalogue from file and parse
-		String catFile = args[0];
+		String catFile = "/home/andrew/Documents/COMP3211 - Advanced Databases - CW/RelationalQueryOptimizer/data/cat.txt";
+//		String catFile = args[0];
 		Catalogue cat = new Catalogue();
 		CatalogueParser catParser = new CatalogueParser(catFile, cat);
 		catParser.parse();
 		
 		// read stdin, parse, and build canonical query plan
-		QueryParser queryParser = new QueryParser(cat, new InputStreamReader(System.in));
+		File file = new File ("/home/andrew/Documents/COMP3211 - Advanced Databases - CW/" +
+				"RelationalQueryOptimizer/data/q5.txt");
+		QueryParser queryParser = new QueryParser(cat, new InputStreamReader(new FileInputStream(file)));
+//		QueryParser queryParser = new QueryParser(cat, new InputStreamReader(System.in));
 		Operator plan = queryParser.parse();
 				
 		// create estimator visitor and apply it to canonical plan
-		//Estimator est = new Estimator();
-		//plan.accept(est);
+		Estimator est = new Estimator();
+		plan.accept(est);
 		
 		// create optimised plan
 		//Optimiser opt = new Optimiser(cat);
