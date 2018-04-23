@@ -250,7 +250,7 @@ public class Estimator implements PlanVisitor {
                             " Not Found In \n" + baseOuput.render() +
                             "\nor\n" + scanOutput.render());
 
-        int TR = baseOuput.getTupleCount() * scanOutput.hashCode();
+        int TR = baseOuput.getTupleCount() * scanOutput.getTupleCount();
 
         // create new output
         Relation newOutput = new Relation(TR / maxVal);

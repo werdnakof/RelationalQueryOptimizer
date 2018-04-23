@@ -138,11 +138,10 @@ public class QueryParser {
 	}
 
 	private Operator buildJoin(String pred, Operator left, Operator right) {
-		Pattern p = Pattern.compile("(\\w+)=\"(\\w+)\"");
+		Pattern p = Pattern.compile("(\\w+)=(\\w+)");
 		Matcher m = p.matcher(pred);
 
 		if (m.matches()) {
-
 			Attribute leftAttr = new Attribute(m.group(1));
 			Attribute rightAttr = new Attribute(m.group(2));
 			return new Join(left, right, new Predicate(leftAttr, rightAttr));
