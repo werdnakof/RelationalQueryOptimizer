@@ -3,9 +3,10 @@
  */
 package sjdb;
 
+import org.w3c.dom.Attr;
+
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Scanner;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -41,6 +42,7 @@ import java.util.regex.Matcher;
 public class QueryParser {
 	private BufferedReader reader;
 	private Catalogue catalogue;
+	static Set<String> relations;
 
 	/**
 	 * Create a new QueryParser. This class is intended to be used once only;
@@ -53,6 +55,7 @@ public class QueryParser {
 	public QueryParser(Catalogue catalogue, Reader input) throws Exception {
 		this.catalogue = catalogue;
 		this.reader = new BufferedReader(input);
+		relations = new HashSet<>();
 	}
 	
 	/**
@@ -63,22 +66,92 @@ public class QueryParser {
 	 * @throws Exception
 	 */
 	public Operator parse() throws Exception {
-		Operator product, select, project;
+		Operator product = null, base = null;
+
 		String projectLine = this.reader.readLine();
 		String productLine = this.reader.readLine();
-		String selectLine = this.reader.readLine();
-		
 		product = parseProduct(productLine);
-		if (selectLine != null && selectLine.startsWith("WHERE")) {
-			select = parseSelect(selectLine, product); 
-			project = parseProject(projectLine, select);
-		} else {
-			project = parseProject(projectLine, product);
+
+		String line;
+		List<String> lines = new ArrayList<>(); // storing joins and where
+
+		while(true) {
+			line = this.reader.readLine();
+			if(line == null) break;
+			lines.add(line);
 		}
-		
-		return project;
+
+		if(lines.size() == 0) return parseProject(projectLine, product);
+
+		base = product;
+
+		for(int i = 0; i < lines.size()-1; i++) {
+
+			line = lines.get(i);
+
+			if(line.startsWith("JOIN")) {
+
+				String relationName = getJoinRelation(line);
+
+				if(relations.contains(relationName)) {
+					throw new IllegalArgumentException("Cannot repeat Relation in JOIN");
+				}
+
+				relations.add(relationName);
+				base = parseJoin(line, base);
+			}
+		}
+
+		String lastLine = lines.get(lines.size()-1);
+
+		if(lastLine.startsWith("WHERE")) {
+			base = parseSelect(lastLine, base);
+		}
+
+		return parseProject(projectLine, base);
 	}
-	
+
+	public String getJoinRelation(String line) {
+
+		String[] relationship = line.split("JOIN\\s+"); // get relation to join
+
+		String[] relPred = relationship[1].split("\\s*ON\\s*"); // get predicates
+
+		return relPred[0];
+	}
+
+	public Operator parseJoin(String line, Operator base) { // base to be product of relationships
+
+		String[] relationship = line.split("JOIN\\s+"); // get relation to join
+
+		String[] relPred = relationship[1].split("\\s*ON\\s*"); // get predicates
+
+		String[] predicates = relPred[1].split("\\s*,\\s*"); // multi predicates in JOIN
+
+		Operator right = buildScan(relPred[0]); // get Scan of relationship
+
+		for(String re: predicates) {
+			base = buildJoin(re, base, right);
+		}
+
+		return base;
+	}
+
+	private Operator buildJoin(String pred, Operator left, Operator right) {
+		Pattern p = Pattern.compile("(\\w+)=\"(\\w+)\"");
+		Matcher m = p.matcher(pred);
+
+		if (m.matches()) {
+
+			Attribute leftAttr = new Attribute(m.group(1));
+			Attribute rightAttr = new Attribute(m.group(2));
+			return new Join(left, right, new Predicate(leftAttr, rightAttr));
+
+		} else {
+			throw new IllegalArgumentException("Invalid JOIN predicate statement");
+		}
+	}
+
 	/**
 	 * Parse a "FROM ..." line 
 	 * @param line
@@ -87,7 +160,6 @@ public class QueryParser {
 	public Operator parseProduct(String line) {
 		String[] rels = line.split("FROM\\s+");
 		String[] reln = rels[1].split("\\s*,\\s*");
-		
 		return buildProduct(reln);
 	}
 	
@@ -98,15 +170,21 @@ public class QueryParser {
 	 * @return
 	 */
 	private Operator buildProduct(String[] names) {
+
 		Operator left = buildScan(names[0].trim());
 		Operator right;
-		Operator accum;
 		
 		if (names.length>1) {
+
 			for (int i = 1; i < names.length; i++) {
+
 				right = buildScan(names[i].trim());
-				accum = new Product(left, right);
-				left = accum;
+
+				if(relations.contains(names[i].trim())) continue; // avoid duplication
+
+				relations.add(names[i].trim());
+
+				left = new Product(left, right);
 			}
 		}
 		
@@ -136,9 +214,11 @@ public class QueryParser {
 	 * @return
 	 */
 	private Operator parseSelect(String line, Operator op) {
+
 		String[] prds = line.split("WHERE\\s+");
 
 		String[] pred = prds[1].split("\\s*,\\s*");
+
 		Operator ret = op;
 		
 		for (int i=0; i<pred.length; i++) {

@@ -23,7 +23,7 @@ public class SJDB {
 		
 		// read stdin, parse, and build canonical query plan
 		File file = new File ("/home/andrew/Documents/COMP3211 - Advanced Databases - CW/" +
-				"RelationalQueryOptimizer/data/q5.txt");
+				"RelationalQueryOptimizer/data/q6.txt");
 		QueryParser queryParser = new QueryParser(cat, new InputStreamReader(new FileInputStream(file)));
 //		QueryParser queryParser = new QueryParser(cat, new InputStreamReader(System.in));
 		Operator plan = queryParser.parse();
@@ -33,8 +33,8 @@ public class SJDB {
 		plan.accept(est);
 		
 		// create optimised plan
-		//Optimiser opt = new Optimiser(cat);
-		//Operator optPlan = opt.optimise(plan);
+//		Optimiser opt = new Optimiser(cat);
+//		Operator optPlan = opt.optimise(plan);
 	}
 
 }

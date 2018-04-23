@@ -1,0 +1,5 @@
+SELECT projname, deptname
+FROM Person
+JOIN Department ON persid=manager
+JOIN Project ON dept=deptid
+WHERE persname="Smith"
